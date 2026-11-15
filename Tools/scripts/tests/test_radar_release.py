@@ -53,12 +53,12 @@ class ReleaseTests(unittest.TestCase):
         # The upstream board-list reader leaves input files unclosed.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ResourceWarning)
-            plan = boards.make_plan("v4.7.0-dev-1.0.0", "test-commit", 16)
+            plan = boards.make_plan("v4.7.0-dev-1.0.0", "test-commit", 20)
         self.assertIn("Pixhawk6X", plan["candidates"])
         assigned = [name for batch in plan["matrix"]["include"] for name in batch["boards"]]
         self.assertCountEqual(assigned, plan["candidates"])
         self.assertEqual(len(assigned), len(set(assigned)))
-        self.assertLessEqual(len(plan["matrix"]["include"]), 16)
+        self.assertEqual(len(plan["matrix"]["include"]), 20)
         self.assertNotIn("SITL_x86_64_linux_gnu", assigned)
         self.assertNotIn("Pixhawk6X-bdshot", assigned)
         self.assertFalse(any(name.lower().endswith("-bdshot") for name in assigned))

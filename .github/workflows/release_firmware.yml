@@ -41,7 +41,7 @@ jobs:
         run: |
           python3 Tools/scripts/radar_release_boards.py \
             --version "$RELEASE_VERSION" --commit "$SOURCE_COMMIT" \
-            --batches 16 --output release-plan.json --github-output "$GITHUB_OUTPUT"
+            --batches 20 --output release-plan.json --github-output "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: radar-release-plan
@@ -56,7 +56,7 @@ jobs:
     container: ardupilot/ardupilot-dev-chibios:v0.1.3
     strategy:
       fail-fast: false
-      max-parallel: 16
+      max-parallel: 20
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v5

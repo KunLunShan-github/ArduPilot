@@ -63,7 +63,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", required=True)
     parser.add_argument("--commit", required=True)
-    parser.add_argument("--batches", type=int, default=16)
+    parser.add_argument("--batches", type=int, default=20)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
