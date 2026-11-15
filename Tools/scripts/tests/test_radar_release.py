@@ -60,6 +60,11 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(len(assigned), len(set(assigned)))
         self.assertLessEqual(len(plan["matrix"]["include"]), 16)
         self.assertNotIn("SITL_x86_64_linux_gnu", assigned)
+        self.assertNotIn("Pixhawk6X-bdshot", assigned)
+        self.assertFalse(any(name.lower().endswith("-bdshot") for name in assigned))
+        excluded = {item["board"]: item["reason"] for item in plan["excluded"]}
+        self.assertEqual(excluded["Pixhawk6X-bdshot"], "bdshot variants are not published")
+        self.assertEqual(excluded["ARKV6X-bdshot"], "bdshot variants are not published")
         with self.assertRaises(ValueError):
             boards.validate_board("../Pixhawk6X")
 

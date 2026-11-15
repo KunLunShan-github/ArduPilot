@@ -36,6 +36,9 @@ def make_plan(version, commit, batch_count):
     candidates = []
     excluded = []
     for name in inventory.find_autobuild_boards("Copter"):
+        if name.lower().endswith("-bdshot"):
+            excluded.append({"board": name, "reason": "bdshot variants are not published"})
+            continue
         hwdef = ROOT / "libraries/AP_HAL_ChibiOS/hwdef" / name / "hwdef.dat"
         if not hwdef.is_file() or definitions[name].toolchain != "arm-none-eabi":
             excluded.append({"board": name, "reason": "outside ChibiOS arm-none-eabi release scope"})
