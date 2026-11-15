@@ -1,14 +1,18 @@
 """Offline tests for release planning, feature checks and completeness gates."""
 
 import argparse
+import ast
+from contextlib import redirect_stdout
+import fnmatch
 import hashlib
+import io
 import json
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import warnings
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -17,6 +21,28 @@ import radar_release_build as build  # noqa: E402
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_periph_radar_define_does_not_leak_into_copter(self):
+        path = boards.ROOT / "Tools/AP_Periph/wscript"
+        function = next(node for node in ast.parse(path.read_text()).body
+                        if isinstance(node, ast.FunctionDef) and node.name == "build")
+        namespace = {"fnmatch": fnmatch}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), str(path), "exec"), namespace)
+        # ARKV6X is included by the coarse AP_PERIPH string search, even though
+        # its normal Copter configuration is not an AP_Periph build.
+        for board, periph, heavy, listed in (
+                ("ARKV6X-bdshot", False, False, True),
+                ("Pixhawk6X", False, False, False),
+                ("CubeNode-ETH", True, False, True),
+                ("periph-heavy", True, True, True)):
+            with self.subTest(board=board):
+                context = Mock()
+                context.env = argparse.Namespace(BOARD=board, AP_PERIPH=periph,
+                                                 AP_PERIPH_HEAVY=heavy, DEFINES=[])
+                context.ap_periph_boards.return_value = [board] if listed else []
+                context.ap_get_all_libraries.return_value = []
+                namespace["build"](context)
+                self.assertEqual("HAL_RADARODOM_ENABLED=0" in context.env.DEFINES, periph)
+
     def test_version(self):
         self.assertEqual(boards.validate_version("v4.7.0-dev-1.0.0"), "v4.7.0-dev-1.0.0")
         for value in ("v1.0.0", "v4.7.0-dev-1.0", "v4.7.0-dev-01.0.0", "../../file"):
@@ -69,10 +95,15 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             args = argparse.Namespace(boards_json='["Pixhawk6X"]', output=Path(temp) / "out",
                                       version="v4.7.0-dev-1.0.0", commit="test", jobs=2, clean=False)
-            with patch.object(build, "run", side_effect=subprocess.CalledProcessError(1, "waf")):
+            output = io.StringIO()
+            with redirect_stdout(output), \
+                    patch.object(build, "run", side_effect=subprocess.CalledProcessError(1, "waf")):
                 self.assertEqual(build.build_batch(args), 1)
             result = json.loads((args.output / "results.json").read_text())
             self.assertEqual(result["boards"][0]["status"], "failed")
+            self.assertIn(result["boards"][0]["reason"], output.getvalue())
+            log = args.output / "logs/Pixhawk6X.log"
+            self.assertIn(result["boards"][0]["reason"], log.read_text())
 
     def test_enabled_board_with_and_without_bootloader(self):
         for has_bootloader in (False, True):

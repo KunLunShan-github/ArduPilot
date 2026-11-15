@@ -135,10 +135,12 @@ def build_batch(args):
                     run(["./waf", "clean"], log)
             except (subprocess.CalledProcessError, OSError, ValueError) as error:
                 record.update(status="failed", reason=str(error))
+                log.write(f"\nFailure: {error}\n")
         result["boards"].append(record)
         write_json(result_path, result)
         print(f"{board}: {record['status']}", flush=True)
         if record["status"] == "failed":
+            print(f"Failure: {record['reason']}", flush=True)
             print("\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-60:]))
         print("::endgroup::", flush=True)
     return int(any(record["status"] == "failed" for record in result["boards"]))
