@@ -134,7 +134,12 @@ class ReleaseTests(unittest.TestCase):
                     self.assertEqual(runner.call_count, 5 if has_bootloader else 2)
                 result = json.loads((args.output / "results.json").read_text())["boards"][0]
                 self.assertEqual(result["status"], "built")
+                self.assertEqual(result["firmware"], "Pixhawk6X_ArduCopter.apj")
+                self.assertEqual((args.output / result["firmware"]).read_bytes(), b"application")
                 self.assertEqual("bootloader" in result, has_bootloader)
+                if has_bootloader:
+                    self.assertEqual(result["bootloader"], "Pixhawk6X_bootloader.bin")
+                    self.assertEqual((args.output / result["bootloader"]).read_bytes(), b"bootloader")
 
     def test_bootloader_failure_blocks_board(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -161,11 +166,11 @@ class ReleaseTests(unittest.TestCase):
         build.write_json(root / "plan.json", plan)
         batch = root / "batches/radar-batch-0"
         batch.mkdir(parents=True)
-        (batch / "ArduCopter-Pixhawk6X.apj").write_bytes(b"application")
-        (batch / "Pixhawk6X-bootloader.bin").write_bytes(b"bootloader")
+        (batch / "Pixhawk6X_ArduCopter.apj").write_bytes(b"application")
+        (batch / "Pixhawk6X_bootloader.bin").write_bytes(b"bootloader")
         result = {"version": plan["version"], "commit": plan["commit"], "boards": [
-            {"board": "Pixhawk6X", "status": "built", "firmware": "ArduCopter-Pixhawk6X.apj",
-             "bootloader": "Pixhawk6X-bootloader.bin"},
+            {"board": "Pixhawk6X", "status": "built", "firmware": "Pixhawk6X_ArduCopter.apj",
+             "bootloader": "Pixhawk6X_bootloader.bin"},
             {"board": "small-board", "status": "skipped", "reason": "HAL_RADARODOM_ENABLED=0"},
         ]}
         build.write_json(batch / "results.json", result)
@@ -177,7 +182,8 @@ class ReleaseTests(unittest.TestCase):
             args, _, _ = self.fixture(Path(temp))
             self.assertEqual(build.collect(args), 0)
             self.assertEqual((args.output / "supported-boards.txt").read_text(), "Pixhawk6X\n")
-            self.assertTrue((args.output / "Pixhawk6X-bootloader.bin").is_file())
+            self.assertTrue((args.output / "Pixhawk6X_ArduCopter.apj").is_file())
+            self.assertTrue((args.output / "Pixhawk6X_bootloader.bin").is_file())
             self.assertFalse(any("v4.7.0" in item.name for item in args.output.iterdir()))
             for line in (args.output / "SHA256SUMS").read_text().splitlines():
                 digest, name = line.split("  ", 1)
@@ -198,7 +204,7 @@ class ReleaseTests(unittest.TestCase):
                 elif failure == "asset":
                     result["boards"][0]["firmware"] = "../wrong.apj"
                 else:
-                    (path.parent / "ArduCopter-Pixhawk6X.apj").unlink()
+                    (path.parent / "Pixhawk6X_ArduCopter.apj").unlink()
                 build.write_json(path, result)
                 with self.assertRaises(ValueError):
                     build.collect(args)

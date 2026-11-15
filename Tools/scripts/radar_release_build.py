@@ -114,7 +114,7 @@ def build_batch(args):
                     run(["./waf", "copter", "-j", str(args.jobs)], log)
                     build = ROOT / "build" / board
                     check_radar_elf(build / "bin/arducopter", log)
-                    firmware_name = f"ArduCopter-{board}.apj"
+                    firmware_name = f"{board}_ArduCopter.apj"
                     copy_nonempty(build / "bin/arducopter.apj", output / firmware_name)
                     record["firmware"] = firmware_name
                     hwdef_bl = ROOT / "libraries/AP_HAL_ChibiOS/hwdef" / board / "hwdef-bl.dat"
@@ -125,7 +125,7 @@ def build_batch(args):
                              "--no-submodule-update"], log)
                         run(["./waf", "clean"], log)
                         run(["./waf", "bootloader", "-j", str(args.jobs)], log)
-                        name = f"{board}-bootloader.bin"
+                        name = f"{board}_bootloader.bin"
                         copy_nonempty(build / "bin/AP_Bootloader.bin", output / name)
                         record["bootloader"] = name
                     else:
@@ -174,8 +174,8 @@ def collect(args):
         raise ValueError("Release output directory must be empty")
     for record in built:
         board = record["board"]
-        for key, wanted in (("firmware", f"ArduCopter-{board}.apj"),
-                            ("bootloader", f"{board}-bootloader.bin")):
+        for key, wanted in (("firmware", f"{board}_ArduCopter.apj"),
+                            ("bootloader", f"{board}_bootloader.bin")):
             if key not in record:
                 if key == "firmware":
                     raise ValueError(f"No firmware recorded for {board}")
@@ -195,8 +195,8 @@ def collect(args):
     notes = (
         f"# {plan['version']}\n\nCommit: `{plan['commit']}`\n\n"
         f"Radar-enabled ChibiOS ArduCopter builds: {len(built)}.\n\n"
-        "- 正常升级请选择与板型完全匹配的 `ArduCopter-<board>.apj`。\n"
-        "- `*-bootloader.bin` 是单独构建的引导程序，不是普通升级固件；"
+        "- 正常升级请选择与板型完全匹配的 `<board>_ArduCopter.apj`。\n"
+        "- `*_bootloader.bin` 是单独构建的引导程序，不是普通升级固件；"
         "仅供明确需要恢复或更新Bootloader的专业人员使用，误刷可能导致设备无法启动。\n"
         "- 应用固件中的内置Bootloader仍采用该Tag仓库记录的版本；"
         "单独发布的Bootloader为本次源码构建，不提供混合版本的组合镜像。\n"
